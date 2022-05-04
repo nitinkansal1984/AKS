@@ -1,3 +1,6 @@
+##Create resource Group
+az group create -l westus -n MyResourceGroup
+
 ##Create the AKS cluster
 az aks create --resource-group myResourceGroup --name myAKSCluster --enable-addons http_application_routing
 
