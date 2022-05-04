@@ -1,0 +1,38 @@
+##Create the AKS cluster
+az aks create --resource-group myResourceGroup --name myAKSCluster --enable-addons http_application_routing
+
+##Verify DNS zone name
+az aks show --resource-group myResourceGroup --name myAKSCluster --query addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName -o table
+
+##Verify the http routing setting in AKS and DNS zone blade on portal
+
+Login in to portal 
+
+##Download the kube-config file
+
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster
+
+##Check cluster connectivity using kubectl
+kubectl get pods
+kubectl get nodes
+
+##Download the kubernetes manifest file and deploy the helloworld application
+
+wget https://raw.githubusercontent.com/nitinkansal1984/AKS/main/samples-http-application-routing.yaml -O /tmp/samples-http-application-routing.yaml
+kubectl apply -f /tmp/samples-http-application-routing.yaml
+
+##Access the logs of the http routing addon pod to see DNS record changes.
+
+kubectl logs -f deploy/addon-http-application-routing-external-dns -n kube-system
+
+##Verify the DNS records in azure portal
+
+Login in to portal and verify DNS records
+
+##Open browser to access application using DNS name 
+
+##Cleanup: 
+
+Remove the application
+Disable the addon
+Remove the pods/cm/secrets in kube-system if still lying.
