@@ -1,0 +1,32 @@
+##Enable monnitoring during launch time:
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --kubernetes-version 1.21.7 --enable-addons http_application_routing,monitoring
+
+##Using CLI to Enable monitoring addon on existing cluster:
+az aks enable-addons -a monitoring -n myAKSCluster -g myResourceGroup
+
+##Using Portal to Enable montioring on existing cluster:
+Login in to portal -> Monitor -> Containers -> Unmonitored cluster -> Enable
+
+##Verify OMSAgent running in kube-system namespace:
+kubectl get pods -n kube-system
+
+##Go back to portal -> monitor -> containers -> monitored clusters -> verify all metrics being collected
+
+
+##Login inside the node using below command and check the number of disk available
+kubectl debug node/aks-nodepool1-12813571-vmss000000 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
+lsblk
+
+
+##Now go to report tab in monitoring and click on report tab in insight and notice/compare the disk capacity usage.
+
+## Click on nodes and check the live logs and disks attached to it.
+## Expand nodes to see all containers.
+
+## run a standalone pod nginx on cluster and refresh the tab controller to see new pods comes in there in 4-5 minutes under PODS without controller.
+
+We can create alerts also (click on recommeded alerts and create action group)
+
+
+
+
