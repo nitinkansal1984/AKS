@@ -2,7 +2,7 @@
 az group create -l eastus -n MyResourceGroup
 
 ##Create the AKS cluster
-az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --kubernetes-version 1.22.4 --enable-addons http_application_routing
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --kubernetes-version 1.21.7 --enable-addons http_application_routing
 
 ##Verify DNS zone name
 az aks show --resource-group myResourceGroup --name myAKSCluster --query addonProfiles.httpApplicationRouting.config.HTTPApplicationRoutingZoneName -o table
