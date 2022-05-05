@@ -1,10 +1,21 @@
-##Enable monnitoring during launch time:
-az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --kubernetes-version 1.21.7 --enable-addons http_application_routing,monitoring
+##Create resource group
+az group create -l eastus -n MyResourceGroup
 
-##Using CLI to Enable monitoring addon on existing cluster:
+
+##Create log analytics workspace, where containers logs will be collected
+
+az monitor log-analytics workspace create -g MyResourceGroup -n MyWorkspace
+
+##Get the workspace id
+WKSPID=$(az monitor log-analytics workspace list --resource-group MyResourceGroup  --query [].id --output tsv)
+
+##Enable monnitoring during launch time:
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1 --kubernetes-version 1.21.7 --enable-addons monitoring --workspace-resource-id $WKSPID
+
+[OPTIONAL] - Using CLI to Enable monitoring addon on existing cluster:
 az aks enable-addons -a monitoring -n myAKSCluster -g myResourceGroup
 
-##Using Portal to Enable montioring on existing cluster:
+[OPTIONAL] - Using Portal to Enable montioring on existing cluster:
 Login in to portal -> Monitor -> Containers -> Unmonitored cluster -> Enable
 
 ##Verify OMSAgent running in kube-system namespace:
