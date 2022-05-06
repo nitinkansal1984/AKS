@@ -1,0 +1,100 @@
+##Let's try creating cluster with addon virtual node and azure advanced networking Azure-CNI.
+
+az group create -l eastus -n MyResourceGroup;
+
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1  --enable-addons virtual-node --network-plugin azure
+
+
+
+##When we create AKS with virtual node, we will need to pass in ACISubnet and VnetID along with the recommended service principal having contributer access to vnet.
+
+##Let's go ahead and create these resources using Azure CLI.
+
+##Assign few variables first.
+
+VnetName=myVnet
+ACISubnetName=myVirtualNodeSubnet
+AKSSubnetName=myAKSSubnet
+
+Create AKSSubnet which will be used by compute nodes-
+
+az network vnet create \
+    --resource-group myResourceGroup \
+    --name $VnetName \
+    --address-prefixes 10.0.0.0/8 \
+    --subnet-name $AKSSubnetName \
+    --subnet-prefix 10.240.0.0/16
+
+
+Create ACI Subnet which will be used by virtual compute nodes-
+
+az network vnet subnet create \
+    --resource-group myResourceGroup \
+    --vnet-name $VnetName \
+    --name $ACISubnetName \
+    --address-prefixes 10.241.0.0/16
+
+##Grab the vnet id
+
+VnetID=$(az network vnet show --resource-group myResourceGroup --name $VnetName --query id -o tsv)
+AKSSubnetID=$(az network vnet  subnet show --resource-group myResourceGroup --name myAKSSubnet --vnet-name $VnetName --query id -o tsv)
+
+
+##What if we try creating cluster now without having service prinicipal or cluster identity.
+
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1  --enable-addons virtual-node --network-plugin azure --aci-subnet-name $ACISubnetName --vnet-subnet-id $AKSSubnetID
+
+It is highly recommended to use USER assigned identity (option --assign-identity) when you want to bring your ownsubnet, which will have no latency for the role assignment to take effect. When using SYSTEM assigned identity, azure-cli will grant Network Contributor role to the system assigned identity after the cluster is created, and the role assignment will take some time to take effect.
+
+This way it can take more time but let's go ahead and let it create system assigned identity and assign network contributer role. 
+
+In case you want to create your own, then create service prinicipal as follows:
+
+
+##Create Service principal :
+
+az ad sp create-for-rbac
+
+##Make a note of the appId and password. These values are used in the following steps.
+
+az role assignment create --assignee <appId> --scope $VnetID --role Contributor
+
+##Now pass below 2 parameters while creating cluster.
+
+    --service-principal <appId> \
+    --client-secret <password>
+
+
+##Grab the credentials to connect to cluster
+
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster
+
+## check the number of available nodes part of the cluster
+kubectl get nodes
+
+kubectl get pods -n kube-system
+
+##The ACI pod will take time to come up as permission didn't take effect now. Let's wait.
+
+##Meanwhile you can see the logs:
+
+kubectl logs aci-connector-linux-65d8cd77b-sbd45 -n kube-system
+
+##Let's now deploy hello world application on the virtual node.
+
+##Download the manifest file
+
+wget https://raw.githubusercontent.com/nitinkansal1984/AKS/main/virtualnode.yaml -O /tmp/virtualnode.yaml
+vim /tmp/virtualnode.yaml
+
+kubectl apply -f /tmp/virtualnode.yaml
+
+##wait for the pods to be running state
+
+##Login in azure portal and check container instance. There will be one container instance running which is basically running your application instances
+
+## scale the number of replicas
+
+kubectl scale deployment aci-helloworld --replicas 10
+
+## check container instance in portal once again, you will see containers are running, those are basically virtual nodes.
