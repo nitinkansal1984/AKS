@@ -1,0 +1,22 @@
+##download the credential to connect to cluster
+ 
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster
+
+
+## check the number of nodes
+
+kubectl get nodes
+
+##Download the manifest to deploy cat dog voting application
+
+wget https://raw.githubusercontent.com/nitinkansal1984/AKS/main/azure-vote.yaml -O /tmp/azure-vote.yaml
+
+## Deploy the application on cluster
+
+kubectl apply -f /tmp/azure-vote.yaml
+
+# Grab the public IP address
+kubectl get service azure-vote-front --watch
+
+## Delete the cluster
+az aks delete --resource-group myResourceGroup --name myAKSCluster --yes --no-wait
