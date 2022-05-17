@@ -1,0 +1,108 @@
+Secrets Store CSI Driver on Azure Kubernetes Service (AKS) provides a variety of methods of identity-based access to your Azure key vault.  
+
+1. Pod identities
+2. User Assigned Identity
+3. System Assigned Identity
+
+User Assigned Identity--
+
+We will see a demo on user assigned identity which can be enabled as part of plugin.
+
+
+
+## Create resource group
+az group create -n myResourceGroup -l eastus
+
+## Create AKS cluster
+az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-keyvault-secrets-provider --enable-managed-identity
+
+The addon creates user assigned identity named azurekeyvaultsecretsprovider-*. You can see it from azure portal- search for managed identities:
+
+  "identityProfile": {
+    "kubeletidentity": {
+      "clientId": "0c6fce52-d4f1-4bb6-b714-ad38b383c938",
+      "objectId": "11021227-c4a7-453d-bf19-cf512ad785be",
+      "resourceId": "/subscriptions/f8b9b693-fc66-4e1b-a547-110404abc3c3/resourcegroups/MC_myResourceGroup_myAKSCluster_eastus/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myAKSCluster-agentpool"
+    }
+
+
+## It installs the Secrets Store CSI Driver and the Azure Key Vault Provider on your nodes.
+
+## Let's first download the credential and connect to kubernetes cluster
+
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster --overwrite
+kubectl get nodes
+kubectl get pods
+
+kubectl get pods -n kube-system -l 'app in (secrets-store-csi-driver, secrets-store-provider-azure)'
+
+NAME                                     READY   STATUS    RESTARTS   AGE
+aks-secrets-store-csi-driver-4vpkj       3/3     Running   2          4m25s
+aks-secrets-store-csi-driver-ctjq6       3/3     Running   2          4m21s
+aks-secrets-store-csi-driver-tlvlq       3/3     Running   2          4m24s
+aks-secrets-store-provider-azure-5p4nb   1/1     Running   0          4m21s
+aks-secrets-store-provider-azure-6pqmv   1/1     Running   0          4m24s
+aks-secrets-store-provider-azure-f5qlm   1/1     Running   0          4m25s
+
+
+## Let's create azure key vault and create a secret within it
+
+export KEYVAULT=mykeyvault`date +%d%m%Y`
+
+az keyvault create -n $KEYVAULT -g myResourceGroup -l eastus
+
+az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value MyAKSExampleSecret
+
+
+## Head back to azure portal to verify vault and secret created and get the client id of identity:
+
+export IDENTITY_CLIENT_ID="<clientID>"
+
+## Grant your identity permissions that enable it to read your key vault and view its contents
+
+az keyvault set-policy -n $KEYVAULT --secret-permissions get --spn $IDENTITY_CLIENT_ID
+
+
+## Create a SecretProviderClass. Please replace tanentID, managedID, clientID, name of your keyvault and secret name.
+
+# This is a SecretProviderClass example using user-assigned identity to access your key vault
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kvname-user-msi
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"          # Set to true for using managed identity
+    userAssignedIdentityID: <client-id>   # Set the clientID of the user-assigned managed identity to use
+    keyvaultName: <key-vault-name>        # Set to the name of your key vault
+    cloudName: ""                         # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    objects:  |
+      array:
+        - |
+          objectName: secret1
+          objectType: secret              # object types: secret, key, or cert
+          objectVersion: ""               # [OPTIONAL] object versions, default to latest if empty
+        - |
+          objectName: key1
+          objectType: key
+          objectVersion: ""
+    tenantId: <tenant-id>                 # The tenant ID of the key vault
+
+
+
+
+
+
+## Disable the addon:
+
+## Before you disable the add-on, ensure that no SecretProviderClass is in use. Trying to disable the add-on while SecretProviderClass exists will result in an error.
+
+kubectl delete -f secretproviderclass.yaml
+
+az aks disable-addons --addons azure-keyvault-secrets-provider -g myResourceGroup -n myAKSCluster
+
+Please note  :--
+
+If the add-on is disabled, existing workloads will have no issues and will not see any updates in the mounted secrets. If the pod restarts or a new pod is created as part of scale-up event, the pod will fail to start because the driver is no longer running.
