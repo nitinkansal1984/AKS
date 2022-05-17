@@ -4,11 +4,90 @@ Secrets Store CSI Driver on Azure Kubernetes Service (AKS) provides a variety of
 2. User Assigned Identity
 3. System Assigned Identity
 
+
+Pod Identities:
+Steps:
+##Create pod identity
+
+export POD_IDENTITY_NAME="my-pod-identity"
+export POD_IDENTITY_NAMESPACE="my-app"
+az aks pod-identity add --resource-group myResourceGroup --cluster-name myAKSCluster --namespace ${POD_IDENTITY_NAMESPACE}  --name ${POD_IDENTITY_NAME} --identity-resource-id ${IDENTITY_RESOURCE_ID}
+
+##Take note of the newly created identity's clientId:
+
+Assign permissions to the new identity to enable it to read your key vault and view its contents by running the following commands:
+
+# set policy to access keys in your key vault
+az keyvault set-policy -n <keyvault-name> --key-permissions get --spn <pod-identity-client-id>
+# set policy to access secrets in your key vault
+az keyvault set-policy -n <keyvault-name> --secret-permissions get --spn <pod-identity-client-id>
+# set policy to access certs in your key vault
+az keyvault set-policy -n <keyvault-name> --certificate-permissions get --spn <pod-identity-client-id>
+
+
+## Create manifest file secretproviderclass.yaml to create secretproivider to retrieve objects from key vault:
+
+# This is a SecretProviderClass example using aad-pod-identity to access the key vault
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kvname-podid
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "true"               # Set to true for using aad-pod-identity to access your key vault
+    keyvaultName: <key-vault-name>       # Set to the name of your key vault
+    cloudName: ""                        # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    objects:  |
+      array:
+        - |
+          objectName: secret1
+          objectType: secret             # object types: secret, key, or cert
+          objectVersion: ""              # [OPTIONAL] object versions, default to latest if empty
+        - |
+          objectName: key1
+          objectType: key
+          objectVersion: ""
+    tenantId: <tenant-Id>                # The tenant ID of the key vault
+    
+    
+## Create secretproviderclass to your cluster:
+kubectl apply -f secretproviderclass.yaml
+
+## Create pod by using the following pod.yaml, using the name of your identity:
+
+# This is a sample pod definition for using SecretProviderClass and aad-pod-identity to access the key vault
+kind: Pod
+apiVersion: v1
+metadata:
+  name: busybox-secrets-store-inline-podid
+  labels:
+    aadpodidbinding: <name>                   # Set the label value to the name of your pod identity
+spec:
+  containers:
+    - name: busybox
+      image: k8s.gcr.io/e2e-test-images/busybox:1.29-1
+      command:
+        - "/bin/sleep"
+        - "10000"
+      volumeMounts:
+      - name: secrets-store01-inline
+        mountPath: "/mnt/secrets-store"
+        readOnly: true
+  volumes:
+    - name: secrets-store01-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: "azure-kvname-podid"
+          
+
+## Final step is to create the pod
+kubectl apply -f pod.yaml
+
+
 User Assigned Identity--
-
-We will see a demo on user assigned identity which can be enabled as part of plugin.
-
-
 
 ## Create resource group
 az group create -n myResourceGroup -l eastus
