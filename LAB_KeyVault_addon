@@ -7,22 +7,67 @@ Secrets Store CSI Driver on Azure Kubernetes Service (AKS) provides a variety of
 
 Pod Identities:
 Steps:
-##Create pod identity
 
+## Register the EnablePodIdentityPreview feature:
+az feature register --name EnablePodIdentityPreview --namespace Microsoft.ContainerService
+az provider register -n Microsoft.ContainerService
+az feature show --name EnablePodIdentityPreview  --namespace Microsoft.ContainerService
+
+## You also need the aks-preview Azure CLI extension version 0.5.5 or later. Install the aks-preview Azure CLI extension by using :
+az extension add --name aks-preview
+
+
+## Create resource group
+az group create -n myResourceGroup -l eastus
+
+##Create AKS cluster
+az aks create -g myResourceGroup -n myAKSCluster --enable-pod-identity --network-plugin azure --node-count 1
+
+##Create an identity
+az group create --name myIdentityResourceGroup --location eastus
+export IDENTITY_RESOURCE_GROUP="myIdentityResourceGroup"
+export IDENTITY_NAME="application-identity"
+az identity create --resource-group ${IDENTITY_RESOURCE_GROUP} --name ${IDENTITY_NAME}
+export IDENTITY_CLIENT_ID="$(az identity show -g ${IDENTITY_RESOURCE_GROUP} -n ${IDENTITY_NAME} --query clientId -otsv)"
+export IDENTITY_RESOURCE_ID="$(az identity show -g ${IDENTITY_RESOURCE_GROUP} -n ${IDENTITY_NAME} --query id -otsv)"
+
+##Assign Virtual Machine Contributor role permissions for the identity
+
+NODE_GROUP=$(az aks show -g myResourceGroup -n myAKSCluster --query nodeResourceGroup -o tsv)
+NODES_RESOURCE_ID=$(az group show -n $NODE_GROUP -o tsv --query "id")
+az role assignment create --role "Virtual Machine Contributor" --assignee "$IDENTITY_CLIENT_ID" --scope $NODES_RESOURCE_ID
+
+##Create pod identity for the cluster:
 export POD_IDENTITY_NAME="my-pod-identity"
 export POD_IDENTITY_NAMESPACE="my-app"
 az aks pod-identity add --resource-group myResourceGroup --cluster-name myAKSCluster --namespace ${POD_IDENTITY_NAMESPACE}  --name ${POD_IDENTITY_NAME} --identity-resource-id ${IDENTITY_RESOURCE_ID}
+
+##Download the kubeconfig file to connect to the cluster
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster
+
+
 
 ##Take note of the newly created identity's clientId:
 
 Assign permissions to the new identity to enable it to read your key vault and view its contents by running the following commands:
 
-# set policy to access keys in your key vault
-az keyvault set-policy -n <keyvault-name> --key-permissions get --spn <pod-identity-client-id>
-# set policy to access secrets in your key vault
-az keyvault set-policy -n <keyvault-name> --secret-permissions get --spn <pod-identity-client-id>
-# set policy to access certs in your key vault
-az keyvault set-policy -n <keyvault-name> --certificate-permissions get --spn <pod-identity-client-id>
+## Let's create azure key vault and create a secret and key within it
+
+export KEYVAULT=mykeyvault`date +%d%m%Y`
+
+az keyvault create -n $KEYVAULT -g myResourceGroup -l eastus
+az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value MyAKSExampleSecret
+az keyvault key create --vault-name $KEYVAULT -n mykey
+
+## Head back to azure portal to verify vault and secret created and get the client id of identity:
+
+export IDENTITY_CLIENT_ID="<clientID>"
+
+## Grant your identity permissions that enable it to read your key vault and view its contents
+
+az keyvault set-policy -n $KEYVAULT --secret-permissions get --spn $IDENTITY_CLIENT_ID
+
+
 
 
 ## Create manifest file secretproviderclass.yaml to create secretproivider to retrieve objects from key vault:
@@ -41,14 +86,14 @@ spec:
     objects:  |
       array:
         - |
-          objectName: secret1
+          objectName: ExampleSecret
           objectType: secret             # object types: secret, key, or cert
           objectVersion: ""              # [OPTIONAL] object versions, default to latest if empty
         - |
-          objectName: key1
+          objectName: mykey
           objectType: key
           objectVersion: ""
-    tenantId: <tenant-Id>                # The tenant ID of the key vault
+    tenantId: 1fb17474-0dfd-4e96-8bb8-a2b65fc0667b                # The tenant ID of the key vault
     
     
 ## Create secretproviderclass to your cluster:
@@ -93,7 +138,7 @@ User Assigned Identity--
 az group create -n myResourceGroup -l eastus
 
 ## Create AKS cluster
-az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-keyvault-secrets-provider --enable-managed-identity
+az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-keyvault-secrets-provider --node-count 1 --enable-managed-identity 
 
 The addon creates user assigned identity named azurekeyvaultsecretsprovider-*. You can see it from azure portal- search for managed identities:
 
