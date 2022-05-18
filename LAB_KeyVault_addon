@@ -21,11 +21,10 @@ az extension add --name aks-preview
 az group create -n myResourceGroup -l eastus
 
 ##Create AKS cluster
-az aks create -g myResourceGroup -n myAKSCluster --enable-pod-identity --network-plugin azure --node-count 1
+az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-keyvault-secrets-provider --enable-pod-identity --network-plugin azure --node-count 1
 
 ##Create an identity
-az group create --name myIdentityResourceGroup --location eastus
-export IDENTITY_RESOURCE_GROUP="myIdentityResourceGroup"
+export IDENTITY_RESOURCE_GROUP="myResourceGroup"
 export IDENTITY_NAME="application-identity"
 az identity create --resource-group ${IDENTITY_RESOURCE_GROUP} --name ${IDENTITY_NAME}
 export IDENTITY_CLIENT_ID="$(az identity show -g ${IDENTITY_RESOURCE_GROUP} -n ${IDENTITY_NAME} --query clientId -otsv)"
@@ -42,9 +41,15 @@ export POD_IDENTITY_NAME="my-pod-identity"
 export POD_IDENTITY_NAMESPACE="my-app"
 az aks pod-identity add --resource-group myResourceGroup --cluster-name myAKSCluster --namespace ${POD_IDENTITY_NAMESPACE}  --name ${POD_IDENTITY_NAME} --identity-resource-id ${IDENTITY_RESOURCE_ID}
 
-##Download the kubeconfig file to connect to the cluster
-az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster
+## Azure will create an AzureIdentity resource in your cluster representing the identity in Azure, and an AzureIdentityBinding resource which connects the AzureIdentity to a selector. You can view these resources with
+## Download the kubeconfig file to connect to the cluster
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster --overwrite
 
+kubectl get azureidentity -n $POD_IDENTITY_NAMESPACE
+kubectl get azureidentitybinding -n $POD_IDENTITY_NAMESPACE
+
+kubectl get azureidentity -n $POD_IDENTITY_NAMESPACE -o yaml
+kubectl get azureidentitybinding -n $POD_IDENTITY_NAMESPACE -o yaml
 
 
 ##Take note of the newly created identity's clientId:
@@ -56,8 +61,8 @@ Assign permissions to the new identity to enable it to read your key vault and v
 export KEYVAULT=mykeyvault`date +%d%m%Y`
 
 az keyvault create -n $KEYVAULT -g myResourceGroup -l eastus
-az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value MyAKSExampleSecret
-az keyvault key create --vault-name $KEYVAULT -n mykey
+az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value myPas5@wD1200
+az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret2 --value mySecondPassw0RD
 
 ## Head back to azure portal to verify vault and secret created and get the client id of identity:
 
@@ -97,7 +102,7 @@ spec:
     
     
 ## Create secretproviderclass to your cluster:
-kubectl apply -f secretproviderclass.yaml
+kubectl apply -f secretproviderclass.yaml -n my-app
 
 ## Create pod by using the following pod.yaml, using the name of your identity:
 
@@ -129,7 +134,9 @@ spec:
           
 
 ## Final step is to create the pod
-kubectl apply -f pod.yaml
+kubectl apply -f pod.yaml -n my-app
+
+## Now lets login in to the pod and check the volumes to see the secrets
 
 
 User Assigned Identity--
