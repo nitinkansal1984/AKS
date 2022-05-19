@@ -5,7 +5,22 @@ Secrets Store CSI Driver on Azure Kubernetes Service (AKS) provides a variety of
 3. System Assigned Identity
 
 
-Pod Identities:
+Pod Identities:-
+
+Kubernetes native way to represent cloud identity, configure pods to have identities associated with them, and facilitate applications inside them to access cloud resources and services like azure key vault.
+
+Steps to be performed:
+1. Create a Cluster with azure-keyvault-secret-provider addon and pod identity enabled. 
+
+a. azure-keyvault-secret-provider will deploy  aks-secrets-store-provider, aks-secrets-store-csi-driver
+b. pod identity enabled will deploy will deploy NMI - node managed identity 
+2. Create Azure Identity and assign it VM contributer role scopped with aks VMSS resource group
+3. Add pod identity to AKS, this will create NMI pod, azureidentity and azureidentity binding to enable access to pods to get token from AD to access keyvault service
+4. Create Azure Key Vault and two secrets in it
+5. Assign get permissions to secret for azure identity
+
+
+
 Steps:
 
 ## Register the EnablePodIdentityPreview feature:
@@ -137,6 +152,9 @@ spec:
 kubectl apply -f pod.yaml -n my-app
 
 ## Now lets login in to the pod and check the volumes to see the secrets
+
+
+-----------------------------------------------------------------------------------------------------------------------------------------------------------------------
 
 
 User Assigned Identity--
