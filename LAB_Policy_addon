@@ -4,9 +4,9 @@
 
 The add-on enacts the following functions:
 
-A. Checks with Azure Policy service for policy assignments to the cluster.
-B. Deploys policy definitions into the cluster as constraint template and constraint custom resources.
-C. Reports auditing and compliance details back to Azure Policy service.
+A. Deploys policy definitions into the cluster as constraint template and constraint custom resources. 
+B. Easily assign and view the policy constraint to the cluster from portal.
+C. Azure policy blade will report if any resource created which is not compliant.
 
 
 
