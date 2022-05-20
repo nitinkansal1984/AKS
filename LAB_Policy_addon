@@ -1,0 +1,120 @@
+1. Azure Policy extends Gatekeeper v3, an admission controller webhook for Open Policy Agent (OPA) to apply at-scale enforcements and safeguards on your clusters in a centralized, consistent manner. 
+2. Azure Policy makes it possible to manage and report on the compliance state of your Kubernetes clusters from one place. 
+
+
+The add-on enacts the following functions:
+
+A. Checks with Azure Policy service for policy assignments to the cluster.
+B. Deploys policy definitions into the cluster as constraint template and constraint custom resources.
+C. Reports auditing and compliance details back to Azure Policy service.
+
+
+
+Limitations:
+a. Azure Policy Add-on for Kubernetes is supported on Kubernetes version 1.14 or higher.
+b. Azure Policy Add-on for Kubernetes can only be deployed to Linux node pools.
+c. Only built-in policy definitions are supported. Custom policy definitions are a public preview feature.
+d. Maximum number of pods supported by the Azure Policy Add-on: 10,000
+e. Maximum number of Non-compliant records per policy per cluster: 500
+f. Maximum number of Non-compliant records per subscription: 1 million
+g. Installations of Gatekeeper outside of the Azure Policy Add-on aren't supported. Uninstall any components installed by a previous Gatekeeper installation before enabling the Azure Policy Add-on.
+h. AKS Pod security policy and the Azure Policy Add-on for AKS can't both be enabled
+
+
+
+
+## Launch Cluster
+az group create -n myResourceGroup -l eastus
+az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-policy --node-count 1
+
+##Please note you can enable azure policy addon to an existing cluster also. 
+
+##Enable azure policy addon on to cluster
+
+az aks enable-addons --addons azure-policy --name MyAKSCluster --resource-group MyResourceGroup
+
+##To validate that the add-on installation was successful and that the azure-policy and gatekeeper pods are running, run the following command:
+
+# Download the kubeconfig file
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster --overwrite
+
+# azure-policy pod is installed in kube-system namespace
+kubectl get pods -n kube-system
+
+# gatekeeper pod is installed in gatekeeper-system namespace
+kubectl get pods -n gatekeeper-system
+
+
+# check if we have constraint and constrainttemplate already
+
+kubectl get constraint
+kubectl get constrainttemplate
+
+NOTE- 
+
+1. You can not edit/patch these constraints and constrainttemplates. You have to edit those from azure policy.
+2. These all constraint are just dry run constraint. So you can still create pod with privileged container. It will be logged in to constraint status itself.
+
+Ex.
+
+a. Let's first read the constraint and constrainttemplate which does not allow privileged containers.
+
+kubectl get constrainttemplate k8sazurecontainernoprivilege -o yaml
+
+## Get the kind value of constrainttemplate, that is your constraint.
+
+kubectl get constraint | grep -i k8sazurecontainernoprivilege
+kubectl get k8sazurecontainernoprivilege.constraints.gatekeeper.sh/azurepolicy-container-no-privilege-45214bc38374d623ef71 -o yaml
+
+a. Launch a pod pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-privileged-1
+spec:
+  containers:
+    - name: nginx-privileged-1
+      image: mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine
+      securityContext:
+        privileged: true
+
+Run below command and see in the status below:
+
+kubectl get k8sazurecontainernoprivilege.constraints.gatekeeper.sh/azurepolicy-container-no-privilege-45214bc38374d623ef71 -o yaml
+
+
+
+##Assign a policy definition
+
+To apply a policy definition or initiative, use the Azure portal.
+
+Navigate to the Azure Policy service in Azure portal.
+In the left pane of the Azure Policy page, select Definitions.
+Under Categories select Kubernetes.
+Choose the policy definition or initiative you want to apply. For this example, select the Kubernetes cluster pod security baseline standards for Linux-based workloads initiative.
+Select Assign.
+Set the Scope to the resource group of the AKS cluster with the Azure Policy Add-on enabled.
+Select the Parameters page and update the Effect from audit to deny to block new deployments violating the baseline initiative. You can also add additional namespaces to exclude from evaluation. For this example, keep the default values.
+Select Review + create then Create to submit the policy assignment.
+
+##Check how many constraint currently exist and wait for 30 minutes, as Policy assignments can take up to 20 minutes to sync into each cluster.
+kubectl get constraint | wc -l
+
+Confirm the policy assignments are applied to your cluster by running the following:
+
+kubectl get constraint | wc -l
+
+Let's validated pod rejection by policy. We will create privileged pod. 
+
+apiVersion: v1
+kind: Pod
+metadata:
+  name: nginx-privileged
+spec:
+  containers:
+    - name: nginx-privileged
+      image: mcr.microsoft.com/oss/nginx/nginx:1.15.5-alpine
+      securityContext:
+        privileged: true
+
