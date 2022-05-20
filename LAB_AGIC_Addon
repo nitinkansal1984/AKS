@@ -1,0 +1,45 @@
+AGIC- Application Gateway Ingress Controller
+
+This addon enables the use of Application Gateway Ingress Controller (AGIC) with your AKS cluster
+
+Benefits of AGIC-
+
+1. Eliminate the need of having Load Balancer per kubernetes service. 
+2. Application Gateway directly talk to pods on their private address and does not require NodePort and Kubeproxy.
+3. Application Gateway enables autoscaling 
+4. Protect AKS cluster by providing TLS policy and WAF 
+5. Enable the use of URL routing feature
+6. AGIC add-on supports only Application Gateway v2 SKUs (Standard and WAF), and not the Application Gateway v1 SKUs
+
+Please note that, you can deploy it using Helm or AKS Addon. Helm deployment is more flexible than managed addon approach as we can change deployment values with Helm. 
+
+With addon approach you don't need to update AGIC. It will be automatically updated to the latest version.
+
+Customers can only deploy one AGIC add-on per AKS cluster, and each AGIC add-on currently can only target one Application Gateway. For deployments that require more than one AGIC per cluster or multiple AGICs targeting one Application Gateway, please continue to use AGIC deployed through Helm.
+
+We will see 2 demos -
+
+1. Ingress Controller addon for AKS- Greenfield 
+2. Ingress Controller addon for AKS- Brownfield 
+
+Ingress Controller addon for AKS- Greenfield ---
+
+#Create a resource group.
+az group create --name myResourceGroup --location eastus
+
+#Create a new AKS cluster with the AGIC add-on enabled. We are giving subnet of application gateway.
+
+az aks create -n myCluster -g myResourceGroup --network-plugin azure --enable-managed-identity -a ingress-appgw --appgw-name myApplicationGateway --appgw-subnet-cidr "10.225.0.0/24"
+
+#Deploy a sample application by using AGIC for ingress on the AKS cluster.
+
+az aks get-credentials -n myCluster -g myResourceGroup
+wget https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/aspnetapp.yaml -O /tmp/aspnetapp.yaml
+
+kubectl apply -f aspnetapp.yaml
+
+#Check that the application is reachable through Application Gateway.
+
+
+ 
+
