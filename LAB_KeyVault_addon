@@ -261,6 +261,66 @@ spec:
           secretProviderClass: "azure-kvname-user-msi"
 
 
+-----------
+3. System Assigned Identity
+
+
+1. Create system managed identity from portal under vmss blade
+2. Run command to see identity
+az vmss identity show -g MC_myResourceGroup_myAKSCluster_eastus  -n aks-nodepool1-12398049-vmss  -o yaml
+3. Assign get permission to keyvault secret for this principalID from portal
+
+4. Create secretproviderclass with below file secretproviderclass.yaml
+
+# This is a SecretProviderClass example using system-assigned identity to access your key vault
+apiVersion: secrets-store.csi.x-k8s.io/v1
+kind: SecretProviderClass
+metadata:
+  name: azure-kvname-system-msi
+spec:
+  provider: azure
+  parameters:
+    usePodIdentity: "false"
+    useVMManagedIdentity: "true"    # Set to true for using managed identity
+    userAssignedIdentityID: ""      # If empty, then defaults to use the system assigned identity on the VM
+    keyvaultName: mykeyvault2005202200
+    cloudName: ""                   # [OPTIONAL for Azure] if not provided, the Azure environment defaults to AzurePublicCloud
+    objects:  |
+      array:
+        - |
+          objectName: ExampleSecret
+          objectType: secret        # object types: secret, key, or cert
+          objectVersion: ""         # [OPTIONAL] object versions, default to latest if empty
+    tenantId: 1fb17474-0dfd-4e96-8bb8-a2b65fc0667b           # The tenant ID of the key vault
+
+
+### Create pod with below defination
+
+kind: Pod
+apiVersion: v1
+metadata:
+  name: busybox-secrets-store-inline
+spec:
+  containers:
+    - name: busybox
+      image: k8s.gcr.io/e2e-test-images/busybox:1.29-1
+      command:
+        - "/bin/sleep"
+        - "10000"
+      volumeMounts:
+      - name: secrets-store01-inline
+        mountPath: "/mnt/secrets-store"
+        readOnly: true
+  volumes:
+    - name: secrets-store01-inline
+      csi:
+        driver: secrets-store.csi.k8s.io
+        readOnly: true
+        volumeAttributes:
+          secretProviderClass: "azure-kvname-user-msi"
+          
+
+
 
 ## Disable the addon:
 
