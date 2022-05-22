@@ -31,11 +31,17 @@ az group create --name myResourceGroup --location eastus
 
 az aks create -n myCluster -g myResourceGroup --network-plugin azure --enable-managed-identity -a ingress-appgw --appgw-name myApplicationGateway --appgw-subnet-cidr "10.225.0.0/24"
 
+
+# Head back to portal and validate application gateway is running but there is no backend configured.
+
+# validate AGIC is running using command:
+kubectl get pods -n kube-system
+
+
 #Deploy a sample application by using AGIC for ingress on the AKS cluster.
 
-az aks get-credentials -n myCluster -g myResourceGroup
+az aks get-credentials -n myCluster -g myResourceGroup --overwrite
 wget https://raw.githubusercontent.com/Azure/application-gateway-kubernetes-ingress/master/docs/examples/aspnetapp.yaml -O /tmp/aspnetapp.yaml
-
 kubectl apply -f aspnetapp.yaml
 
 #Check that the application is reachable through Application Gateway.
