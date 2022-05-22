@@ -32,7 +32,7 @@ az group create --name myResourceGroup --location eastus
 az aks create -n myCluster -g myResourceGroup --network-plugin azure --enable-managed-identity -a ingress-appgw --appgw-name myApplicationGateway --appgw-subnet-cidr "10.225.0.0/24"
 
 
-# Head back to portal and validate application gateway is running but there is no backend configured.
+# Head back to portal and validate application gateway is running. Validate backend pool configuration. Validate Listner.
 
 # validate AGIC is running using command:
 kubectl get pods -n kube-system
