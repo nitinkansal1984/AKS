@@ -1,0 +1,93 @@
+## Create resource group
+az group create --name myResourceGroup --location eastus
+
+## Create AKS cluster with open-service-mesh enabled
+
+az aks create \
+  --resource-group myResourceGroup \
+  --name myAKSCluster \
+  --enable-addons open-service-mesh \
+  --node-count 2
+
+## Get the credentials for your cluster
+az aks get-credentials --resource-group myResourceGroup --name myAKSCluster --overwrite
+
+##Verify that the OSM add-on is installed on your cluster
+
+az aks show --resource-group myResourceGroup --name myAKSCluster  --query 'addonProfiles.openServiceMesh.enabled'
+
+## Verify that the OSM mesh is running on your cluster
+
+kubectl get deployment -n kube-system osm-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
+
+kubectl get pods -n kube-system
+
+## You will see bootstrap, controller and injector running
+
+## Verify the configuration of your OSM mesh
+
+kubectl get meshconfig osm-mesh-config -n kube-system -o yaml
+
+## Instal osm
+curl -L https://github.com/openservicemesh/osm/releases/download/${release}/osm-${release}-${system}-amd64.tar.gz | tar -vxzf - ./${system}-amd64/osm version
+echo "export PATH=$PATH:/home/nitin/linux-amd64/" >> ~/.profile
+. .profile
+
+## Create name space and add namespace to  service mesh
+kubectl create ns bookstore 
+kubectl create ns bookbuyer 
+kubectl create ns bookthief 
+kubectl create ns bookwarehouse
+
+osm namespace add bookstore bookbuyer bookthief bookwarehouse
+
+## Validate the annotations:
+
+kubectl get ns bookstore -o yaml
+
+NOTE: Each namespace will have 2 annotations
+openservicemesh.io/monitored-by: osm 
+openservicemesh.io/sidecar-injection: enabled
+
+## osm controller will keep on monitoring any pods being created in these namespace and will add envoy sidecar proxy to that.
+
+## Let's now onboard the application:
+## First create a directory /tmp/bookapp and download all required yaml files there:
+mkdir /tmp/bookapp
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookbuyer.yaml -o /tmp/bookapp/bookbuyer.yaml 
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookwarehouse.yaml -o /tmp/bookapp/bookwarehouse.yaml
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/mysql.yaml -o /tmp/bookapp/mysql.yaml
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookstore-v1.yaml -o /tmp/bookapp/bookstore-v1.yaml
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookstore-v2.yaml -o /tmp/bookapp/bookstore-v2.yaml
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookthief.yaml -o /tmp/bookapp/bookthief.yaml
+
+kubectl apply -f .
+
+## Download the script and execute to portforward the pods to access from browser:
+
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/port-forward-all.sh -o /tmp/bookapp/port-forward-all.sh
+chmod +x /tmp/bookapp/port-forward-all.sh
+
+BOOKBUYER_LOCAL_PORT=7070 BOOKSTOREv1_LOCAL_PORT=7071 BOOKSTOREv2_LOCAL_PORT=7072 BOOKTHIEF_LOCAL_PORT=7073 BOOKSTORE_LOCAL_PORT=7074 /tmp/bookapp/port-forward-all.sh
+
+
+
+## Now let's split the traffic:
+
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-50-50.yaml -o /tmp/bookapp/traffic-split-50-50.yaml 
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-v1.yaml -o /tmp/bookapp/traffic-split-v1.yaml
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-v2.yaml -o /tmp/bookapp/traffic-split-v2.yaml
+
+## Deploy application 
+
+kubectl apply -f /tmp/bookapp/
+
+What got installed?
+kubectl get pods,deployments,serviceaccounts -n bookbuyer
+kubectl get pods,deployments,serviceaccounts -n bookthief
+
+kubectl get pods,deployments,serviceaccounts,services,endpoints -n bookstore
+kubectl get pods,deployments,serviceaccounts,services,endpoints -n bookwarehouse
+
+
+curl https://raw.githubusercontent.com/openservicemesh/osm/main/.env.example -o /tmp/bookapp/.env.example
