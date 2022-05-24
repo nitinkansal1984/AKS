@@ -38,6 +38,10 @@ az group create -n myResourceGroup -l eastus
 ##Create AKS cluster
 az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-keyvault-secrets-provider --enable-pod-identity --network-plugin azure --node-count 1
 
+## option azure-keyvault-secrets-provider deploys secret store csi driver and secret store provider
+## option pod-identity will deploy NMI daemonset on the cluster
+## It is recommended to use azure network-plugin with pod identity
+
 ##Create an identity
 export IDENTITY_RESOURCE_GROUP="myResourceGroup"
 export IDENTITY_NAME="application-identity"
