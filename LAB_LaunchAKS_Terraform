@@ -1,0 +1,293 @@
+Login in to virtual machine
+## Install AZ CLI on the machine
+curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+## Authenticate to azure using az login command
+az login
+
+## In case multiple subscriptions, Check which subscription is set to default:
+az account list --output table
+## Set the right subscription to default (optional)
+az account set --subscription Demos 
+
+## Create storage account which will be used to store terraform state:
+
+export RG=myResourceGroup 
+export STACTNAME=terraformstacc`date +%d%m%Y`
+export LOCATION=eastus
+az group create --name $RG --location eastus
+az storage account create --name $STACTNAME --resource-group $RG --location $LOCATION --sku Standard_LRS --kind StorageV2
+  
+## Verify the resource group and storage account created  from the portal
+## Get the access key of the storage account and assign it to a variable
+export ACT_KEY=''
+
+## Create the container
+az storage container create -n tfstate --account-name $STACTNAME --account-key $ACT_KEY
+
+## Verify the container from portal
+
+## Search terraform install on google and open very first link
+## Execute all commands to install terraform
+
+## Create provider.tf file
+vim provider.tf
+
+terraform {
+
+  required_version = ">=0.12"
+
+  required_providers {
+    azurerm = {
+      source  = "hashicorp/azurerm"
+      version = "~>2.0"
+    }
+  }
+  backend "azurerm" {
+    resource_group_name  = "myResourceGroup"
+    storage_account_name = "terraformstacc31052022"                      ## Replace the storage account name
+    container_name       = "tfstate"
+    key                  = "codelab.microsoft.tfstate"
+  }
+}
+
+provider "azurerm" {
+  features {}
+}
+----------------------------
+
+## initialize the terraform
+terraform init
+----------------------------
+## Create main.tf
+vim main.tf
+
+# Generate random resource group name
+resource "random_pet" "rg-name" {
+  prefix    = var.resource_group_name_prefix
+}
+
+resource "azurerm_resource_group" "rg" {
+  name      = random_pet.rg-name.id
+  location  = var.resource_group_location
+}
+
+resource "random_id" "log_analytics_workspace_name_suffix" {
+    byte_length = 8
+}
+
+resource "azurerm_log_analytics_workspace" "test" {
+    # The WorkSpace name has to be unique across the whole of azure, not just the current subscription/tenant.
+    name                = "${var.log_analytics_workspace_name}-${random_id.log_analytics_workspace_name_suffix.dec}"
+    location            = var.log_analytics_workspace_location
+    resource_group_name = azurerm_resource_group.k8s.name
+    sku                 = var.log_analytics_workspace_sku
+}
+
+resource "azurerm_log_analytics_solution" "test" {
+    solution_name         = "ContainerInsights"
+    location              = azurerm_log_analytics_workspace.test.location
+    resource_group_name   = azurerm_resource_group.k8s.name
+    workspace_resource_id = azurerm_log_analytics_workspace.test.id
+    workspace_name        = azurerm_log_analytics_workspace.test.name
+
+    plan {
+        publisher = "Microsoft"
+        product   = "OMSGallery/ContainerInsights"
+    }
+}
+
+resource "azurerm_kubernetes_cluster" "k8s" {
+    name                = var.cluster_name
+    location            = azurerm_resource_group.k8s.location
+    resource_group_name = azurerm_resource_group.k8s.name
+    dns_prefix          = var.dns_prefix
+
+    linux_profile {
+        admin_username = "ubuntu"
+
+        ssh_key {
+            key_data = file(var.ssh_public_key)
+        }
+    }
+
+    default_node_pool {
+        name            = "agentpool"
+        node_count      = var.agent_count
+        vm_size         = "Standard_D2_v2"
+    }
+
+    service_principal {
+        client_id     = var.aks_service_principal_app_id
+        client_secret = var.aks_service_principal_client_secret
+    }
+
+    addon_profile {
+        oms_agent {
+        enabled                    = true
+        log_analytics_workspace_id = azurerm_log_analytics_workspace.test.id
+        }
+    }
+
+    network_profile {
+        load_balancer_sku = "Standard"
+        network_plugin = "kubenet"
+    }
+
+    tags = {
+        Environment = "Development"
+    }
+}
+
+-------------------
+## Create variables.tf
+
+vim variables.tf
+
+variable "resource_group_name_prefix" {
+  default       = "rg"
+  description   = "Prefix of the resource group name that's combined with a random ID so name is unique in your Azure subscription."
+}
+
+variable "resource_group_location" {
+  default       = "eastus"
+  description   = "Location of the resource group."
+}
+
+variable "agent_count" {
+    default = 3
+}
+
+variable "ssh_public_key" {
+    default = "~/.ssh/id_rsa.pub"
+}
+
+variable "dns_prefix" {
+    default = "k8stest"
+}
+
+variable cluster_name {
+    default = "k8stest"
+}
+
+variable resource_group_name {
+    default = "azure-k8stest"
+}
+
+variable location {
+    default = "Central US"
+}
+
+variable log_analytics_workspace_name {
+    default = "testLogAnalyticsWorkspaceName"
+}
+
+# refer https://azure.microsoft.com/global-infrastructure/services/?products=monitor for log analytics available regions
+variable log_analytics_workspace_location {
+    default = "eastus"
+}
+
+# refer https://azure.microsoft.com/pricing/details/monitor/ for log analytics pricing
+variable log_analytics_workspace_sku {
+    default = "PerGB2018"
+}
+
+variable aks_service_principal_app_id {
+}
+
+variable aks_service_principal_client_secret {
+}
+
+variable aks_service_principal_object_id {
+}
+
+---------------------------
+## Create output.tf
+
+---------------------------
+vim output.tf
+
+output "resource_group_name" {
+  value = azurerm_resource_group.rg.name
+}
+
+    output "client_key" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.client_key
+}
+
+output "client_certificate" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.client_certificate
+}
+
+output "cluster_ca_certificate" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.cluster_ca_certificate
+}
+
+output "cluster_username" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.username
+}
+
+output "cluster_password" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.password
+}
+
+output "kube_config" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config_raw
+    sensitive = true
+}
+
+output "host" {
+    value = azurerm_kubernetes_cluster.k8s.kube_config.0.host
+}
+----------------------------
+## Generate a rsa private and public key
+
+ssh-keygen -t rsa
+
+----------------------------
+## Create service principal from portal
+az ad sp create-for-rbac --name myAKSClusterServicePrincipal
+
+Please make a note of appID, password and objectID (you can get objectID from portal)
+ 
+## Create file terraform.tfvars with 3 more variables
+aks_service_principal_app_id = ""
+aks_service_principal_client_secret = ""
+aks_service_principal_object_id = ""
+
+
+
+
+
+
+## Initialize the terraform once again with -upgrade option
+
+terraform init -upgrade
+
+## Run terraform plan
+
+terraform plan
+
+## Run terraform apply -approve to create the resources
+
+terraform apply -approve
+
+## In order to connect to the kubernetes cluster, lets install kubectl and download the kube config file in root home directory
+
+curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
+kubectl version --client
+
+mkdir .kube
+echo "$(terraform output kube_config)" > .kube/config
+
+## If you see << EOT at the beginning and EOT at the end, edit the content of the file to remove these characters in file config.
+
+vim .kube/config
+
+## Let's now check the number of nodes part of the cluster using kubectl command:
+
+kubectl get nodes
+
+
+
+
