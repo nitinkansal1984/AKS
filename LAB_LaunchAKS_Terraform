@@ -74,7 +74,7 @@ install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
 kubectl version --client
 
 mkdir .kube
-echo "$(terraform output kube_config)" > .kube/config
+echo "$(terraform output kube_config)" > ~/.kube/config
 
 ## If you see << EOT at the beginning and EOT at the end, edit the content of the file to remove these characters in file config.
 
