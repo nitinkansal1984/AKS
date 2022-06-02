@@ -10,7 +10,7 @@ terraform {
   }
   backend "azurerm" {
     resource_group_name  = "myResourceGroup"
-    storage_account_name = "terraformstacc31052022"                      ## Replace the storage account name
+    storage_account_name = "terraform1000"                      ## Replace the storage account name
     container_name       = "tfstate"
     key                  = "codelab.microsoft.tfstate"
   }
