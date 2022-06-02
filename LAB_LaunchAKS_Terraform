@@ -37,6 +37,7 @@ curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/provider.tf -o /
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/variables.tf -o /root/aks/variables.tf
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/terraform.tfvars -o /root/aks/terraform.tfvars
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/main.tf -o /root/aks/main.tf 
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/output.tf -o /root/aks/output.tf 
 
 ----------------------------
 ## Let's open each file and understand the code.
