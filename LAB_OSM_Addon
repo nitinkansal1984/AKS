@@ -1,3 +1,7 @@
+OSM automatically discovers services that are a part of the service mesh.
+OSM creates traffic policy rules on each Envoy proxy sidecar to be able to communicate with these services.
+
+
 ## Create resource group
 az group create --name myResourceGroup --location eastus
 
@@ -18,8 +22,6 @@ az aks show --resource-group myResourceGroup --name myAKSCluster  --query 'addon
 
 ## Verify that the OSM mesh is running on your cluster
 
-kubectl get deployment -n kube-system osm-controller -o=jsonpath='{$.spec.template.spec.containers[:1].image}'
-
 kubectl get pods -n kube-system
 
 ## You will see bootstrap, controller and injector running
@@ -28,20 +30,46 @@ kubectl get pods -n kube-system
 
 kubectl get meshconfig osm-mesh-config -n kube-system -o yaml
 
-## Instal osm
-curl -L https://github.com/openservicemesh/osm/releases/download/${release}/osm-${release}-${system}-amd64.tar.gz | tar -vxzf - ./${system}-amd64/osm version
-echo "export PATH=$PATH:/home/nitin/linux-amd64/" >> ~/.profile
-. .profile
+Here enablePermissiveTrafficPolicyMode: true, which means OSM has permissive traffic policy mode enabled. With this mode enabled in your OSM mesh:
 
-## Create name space and add namespace to  service mesh
+The SMI - Service Mesh Interface traffic policy enforcement is bypassed.
+
+Service Mesh Interface is a specification that covers the most common service mesh capabilities:
+
+Traffic policy – apply policies like identity and transport encryption across services
+Traffic telemetry – capture key metrics like error rate and latency between services
+Traffic management – shift traffic between different services
+
+
+
+
+## Instal osm client
+
+OSM_VERSION=v1.0.0
+curl -sL "https://github.com/openservicemesh/osm/releases/download/$OSM_VERSION/osm-$OSM_VERSION-linux-amd64.tar.gz" | tar -vxzf -
+echo "export PATH=$PATH:/home/nitin/linux-amd64/" >> ~/.profile
+
+## Check the version of open service mesh
+osm version
+
+
+## Let's now deploy sample microservice. We will deploy 5 different Pods as part of this microservice, and we will apply policies to control the traffic between them.
+## Let's first create 5 name namespaces for each component of the service
+
 kubectl create ns bookstore 
 kubectl create ns bookbuyer 
 kubectl create ns bookthief 
 kubectl create ns bookwarehouse
 
+## Verify the namespace
+kubectl get ns bookstore -o yaml
+
+## Enable OSM to the namespaces
+
 osm namespace add bookstore bookbuyer bookthief bookwarehouse
 
-## Validate the annotations:
+## osm controller will keep on monitoring any pods being created in these namespace and will add envoy sidecar proxy to that. 
+## The above command will add annotation which we can verify by running command:
 
 kubectl get ns bookstore -o yaml
 
@@ -49,11 +77,12 @@ NOTE: Each namespace will have 2 annotations
 openservicemesh.io/monitored-by: osm 
 openservicemesh.io/sidecar-injection: enabled
 
-## osm controller will keep on monitoring any pods being created in these namespace and will add envoy sidecar proxy to that.
+## 
 
 ## Let's now onboard the application:
 ## First create a directory /tmp/bookapp and download all required yaml files there:
 mkdir /tmp/bookapp
+cd /tmp/bookapp
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookbuyer.yaml -o /tmp/bookapp/bookbuyer.yaml 
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/bookwarehouse.yaml -o /tmp/bookapp/bookwarehouse.yaml
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/mysql.yaml -o /tmp/bookapp/mysql.yaml
