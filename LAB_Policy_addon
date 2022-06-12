@@ -22,8 +22,9 @@ h. AKS Pod security policy and the Azure Policy Add-on for AKS can't both be ena
 
 
 
+In this demo, we will launch AKS cluster with Azure Policy Addon enabled, and will apply some policies through policy blade from portal and validate the results.
 
-## Launch Cluster
+## Launch Cluster:
 az group create -n myResourceGroup -l eastus
 az aks create -n myAKSCluster -g myResourceGroup --enable-addons azure-policy --node-count 1
 
