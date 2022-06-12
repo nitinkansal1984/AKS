@@ -114,11 +114,8 @@ Select Review + create then Create to submit the policy assignment.
 
 
 ##Check how many constraint currently exist and wait for 30 minutes, as Policy assignments can take up to 20 minutes to sync into each cluster.
-kubectl get constraint | wc -l
+kubectl get k8sazurecontainernoprivilege
 
-Confirm the policy assignments are applied to your cluster by running the following:
-
-kubectl get constraint | wc -l
 
 Let's validated pod rejection by policy. We will create privileged pod. 
 
