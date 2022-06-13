@@ -19,7 +19,7 @@ spec:
 apiVersion: v1
 kind: ServiceAccount
 metadata:
-  name: bookstore
+  name: bookstore-v1
   namespace: bookstore
 
 ---
@@ -40,7 +40,7 @@ spec:
       labels:
         app: bookstore-v1
     spec:
-      serviceAccountName: bookstore
+      serviceAccountName: bookstore-v1
       nodeSelector:
         kubernetes.io/arch: amd64
         kubernetes.io/os: linux
