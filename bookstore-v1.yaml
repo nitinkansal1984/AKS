@@ -2,7 +2,7 @@
 apiVersion: v1
 kind: Service
 metadata:
-  name: bookstore-v1
+  name: bookstore
   namespace: bookstore
   labels:
     app: bookstore-v1
