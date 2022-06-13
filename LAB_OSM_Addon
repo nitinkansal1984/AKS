@@ -31,25 +31,9 @@ kubectl get pods -n kube-system
 
 kubectl get meshconfig osm-mesh-config -n kube-system -o yaml
 
-Here enablePermissiveTrafficPolicyMode: true, which means OSM has permissive traffic policy mode enabled. With this mode enabled in your OSM mesh:
+Here enablePermissiveTrafficPolicyMode: true, which means OSM has permissive traffic policy mode enabled. With this mode enabled in your OSM mesh. 
+Nothing is blocked with this default setting. 
 
-The SMI - Service Mesh Interface traffic policy enforcement is bypassed. When permissive traffic policy mode is enabled, OSM controller discovers all services 
-that are a part of the mesh and programs wildcard traffic routing rules on each Envoy proxy sidecar to reach every other service in the mesh.
-
-
-What is SMI?
-
-Service meshes interface offer great features to control service-to-service communication, like, for example:
-
-Traffic Access Control: By default when this is enabled, all traffic between pods is blocked. You can create kubernetes objects HTTPRouteGroup and TrafficTarget and 
-enable communication between services.
-
-Traffic Metrics: The Traffic Metrics API allows you to collect metrics on HTTP traffic and make those metrics available to other tools.
-
-Traffic Routing: The Traffic Split API allows you to implement traffic splitting and traffic shifting methods like A/B testing, blue-green deployment, and 
-canary deployment.
-
-Mutual TLS (mTLS): Enable mutual TLS between pods. 
 
 ## Install osm client
 
