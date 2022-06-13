@@ -117,6 +117,8 @@ kubectl get pods,deployments,serviceaccounts,services,endpoints -n bookwarehouse
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/port-forward-all.sh -o /tmp/bookapp/port-forward-all.sh
 chmod +x /tmp/bookapp/port-forward-all.sh
 
+## Expose bookbuyer service and access it.
+
 ## Run commands to port forward bookbuyer and bookstore-v1
 ## Access bookbuyer service from browser.
 
@@ -126,17 +128,20 @@ kubectl apply -f bookthief.yaml
 ## What got installed?
 kubectl get pods,deployments,serviceaccounts -n bookthief
 
-## Run the code to port-forward bookthief application so you can access it from browser.
+## Expose bookthief service and access it
 
 ## Now let's split the traffic:
 
 ## Remember that enablePermissiveTrafficPolicyMode parameter in service mesh configuration is current set as true, so traffic is not blocked. 
+
+
 # Let's now turn if off and verify the application again.
 
 kubectl edit meshconfig osm-mesh-config -n kube-system
 
-## Now try accessing bookbuyer and bookthief again, you will see that is not working now. Now we will create HTTPRouteGroup and TrafficTarget for bookbuy application
-to enable communication from bookbuyer to bookstore-v1.
+## Now try accessing bookbuyer and bookthief again, you will see that is not working now. 
+
+## Now we will create HTTPRouteGroup and TrafficTarget for bookbuy application to enable communication from bookbuyer to bookstore-v1.
 
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-v1.yaml -o /tmp/bookapp/traffic-v1.yaml
 
@@ -146,22 +151,23 @@ kubectl apply -f traffic-v1.yaml
 
 ## Acess bookbuyer application again on port 7070. It will resume the connectivity as there is a traffictarget created for bookbuyer service.
 
+## Now lets deploy second version of bookstore. This will deploy the traafic target also to enable traffic from bookbuyer to bookstore version 2.
+
+kubectl apply -f bookstore-v2.yaml
+
 ## Now lets test traffic split between two versions of bookstore application. We will deploy another version of bookstore and then split the traffic between two.
 
+curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-v2.yaml -o /tmp/bookapp/traffic-split-v2.yaml
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-50-50.yaml -o /tmp/bookapp/traffic-split-50-50.yaml 
 curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-v1.yaml -o /tmp/bookapp/traffic-split-v1.yaml
-curl https://raw.githubusercontent.com/nitinkansal1984/AKS/main/traffic-split-v2.yaml -o /tmp/bookapp/traffic-split-v2.yaml
 
-## Deploy application 
+## Direct all the traffic to version 2 bookstore.
+kubectl apply -f traffic-split-v2.yaml
 
-kubectl apply -f /tmp/bookapp/
+## Direct all the traffic to version 1 bookstore.
+kubectl apply -f traffic-split-v1.yaml
 
-What got installed?
-kubectl get pods,deployments,serviceaccounts -n bookbuyer
-kubectl get pods,deployments,serviceaccounts -n bookthief
+## Finally split the traffic between two versions of bookstore.
+kubectl apply -f traffic-split-v2.yaml
 
-kubectl get pods,deployments,serviceaccounts,services,endpoints -n bookstore
-kubectl get pods,deployments,serviceaccounts,services,endpoints -n bookwarehouse
-
-
-curl https://raw.githubusercontent.com/openservicemesh/osm/main/.env.example -o /tmp/bookapp/.env.example
+Thats it for this demo !
