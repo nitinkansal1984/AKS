@@ -207,7 +207,9 @@ az keyvault create -n $KEYVAULT -g myResourceGroup -l eastus
 az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value MyAKSExampleSecret
 
 
-## Head back to azure portal to verify vault and secret created and get the client id of identity:
+## Head back to azure portal to verify vault and secret created and 
+
+## Let's export the user identity client id to a variable:
 
 export IDENTITY_CLIENT_ID="<clientID>"
 
