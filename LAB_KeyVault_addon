@@ -266,6 +266,10 @@ spec:
           secretProviderClass: "azure-kvname-user-msi"
 
 
+
+## check the secret mounted in the volume
+kubectl exec -it busybox-secrets-store-inline -- cat /mnt/secrets-store/ExampleSecret
+
 -----------
 3. System Assigned Identity
 
@@ -325,7 +329,9 @@ spec:
           secretProviderClass: "azure-kvname-user-msi"
           
 
+## Check the value of secret mounted in volume
 
+kubectl exec -it busybox-secrets-store-inline -- cat /mnt/secrets-store/ExampleSecret
 
 ## Disable the addon:
 
