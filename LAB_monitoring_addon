@@ -18,13 +18,22 @@ az aks enable-addons -a monitoring -n myAKSCluster -g myResourceGroup
 [OPTIONAL] - Using Portal to Enable montioring on existing cluster:
 Login in to portal -> Monitor -> Containers -> Unmonitored cluster -> Enable
 
+
+## Let's now download the credentials of the cluster and connect to it.
+az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster --overwrite
+
 ##Verify OMSAgent running in kube-system namespace:
 kubectl get pods -n kube-system
 
 ##Go back to portal -> monitor -> containers -> monitored clusters -> verify all metrics being collected
 
+## Create alert on the node CPU %.
+1. Enable recommended alert and create action group. Change the alert to send alert for 10% usage. 
+2. Launch a deployment which consume more cpu.
+3. Wait for the email notification
 
-##Login inside the node using below command and check the number of disk available
+
+##Let's do a quick check. We will login inside the node using below command and check the number of disk available
 kubectl debug node/aks-nodepool1-12813571-vmss000000 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
 lsblk
 
@@ -33,10 +42,6 @@ lsblk
 
 ## Click on nodes and check the live logs and disks attached to it.
 ## Expand nodes to see all containers.
-
-## run a standalone pod nginx on cluster and refresh the tab controller to see new pods comes in there in 4-5 minutes under PODS without controller.
-
-We can create alerts also (click on recommeded alerts and create action group)
 
 
 
