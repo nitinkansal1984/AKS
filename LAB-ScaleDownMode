@@ -1,0 +1,28 @@
+# Create Resource Group
+az group create -l eastus -n MyResourceGroup
+
+## Create AKS cluster with one node
+az aks create --resource-group myResourceGroup --name myAKSCluster --node-count 1
+
+
+## Create usernodepool with 5 nodes
+az aks nodepool add \
+            --node-count 5 \
+            --scale-down-mode Deallocate \
+            --node-osdisk-type Managed \
+            --name nodepool2 \
+            --cluster-name myAKSCluster \
+            --resource-group myResourceGroup
+
+
+## Scale down usernodepool to 2 nodes, that will deallocate (stop) 3 worker nodes.
+az aks nodepool scale --node-count 2 --name nodepool2 --cluster-name myAKSCluster --resource-group myResourceGroup
+
+## Now let's set scale down mode to delete. 
+az aks nodepool update --scale-down-mode Delete --name nodepool2 --cluster-name myAKSCluster --resource-group myResourceGroup
+
+## Scale down the nodepool to 1 node
+az aks nodepool scale --node-count 1 --name nodepool2 --cluster-name myAKSCluster --resource-group myResourceGroup
+
+## Now final step is Changing the scale-down mode back to Deallocate and this will delete all deallocated nodes
+az aks nodepool update --scale-down-mode Deallocate --name nodepool2 --cluster-name myAKSCluster --resource-group myResourceGroup
