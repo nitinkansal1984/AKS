@@ -1,0 +1,21 @@
+AKS cluster stop and start
+
+az aks stop --name myAKSCluster --resource-group myResourceGroup
+az aks start --name myAKSCluster --resource-group myResourceGroup
+
+
+NodePool stop and start
+
+## add nodepool
+az aks nodepool add -g MyResourceGroup -n usernodepool --cluster-name MyAKSCluster --os-sku Ubuntu --node-count 1
+
+## Stop nodepool
+az aks nodepool stop --nodepool-name usernodepool --resource-group myResourceGroup --cluster-name myAKSCluster
+
+## Start nodepool
+az aks nodepool start --nodepool-name usernodepool --resource-group myResourceGroup --cluster-name myAKSCluster
+
+## create deployment nginx and standalone pod
+
+kubectl create deployment nginx  --imange nginx
+kubectl run standalonepod --image nginx
