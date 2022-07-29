@@ -1,0 +1,94 @@
+Virtual Memory setting (The settings below can be used to tune the operation of the virtual memory (VM)) like:
+
+vm.max_map_count (It defines maximum number of memory map areas a process may have)	
+cat /proc/sys/vm/max_map_count
+By default value is 65530. We will change it to 65550.
+
+vm.vfs_cache_pressure (It controls the tendency of the kernel to reclaim the memory which is used for caching)	
+cat /proc/sys/vm/vfs_cache_pressure
+By default the value is 100. We will change it to 200.
+
+vm.swappiness (tune how aggressive the kernel will swap memory page)
+cat /sys/fs/cgroup/memory/memory.swappiness
+By default the value is 60. We will change it to 70.
+
+transparentHugePageEnabled (Transparent Hugepages is a Linux kernel feature intended to improve performance by making more efficient use of your processor’s memory-mapping hardware)
+cat /sys/kernel/mm/transparent_hugepage/enabled
+By default value of this parameter is set to always. We will change it to never using custom node configuration during new node group creation.
+
+swapFileSizeMB (This defines the swap file size)
+swapon -s
+By default there is no swap file. We will plan to create 500MB swapfile.
+
+
+------------------------------------------------------------------------------------------------------------------------------------------------
+Systl Socket and network tuning (Settings to control large numbers of concurrent sessions)
+
+netCoreSomaxconn (This defines net core socket max connection)
+cat /proc/sys/net/core/somaxconn
+By default value of this parameter is 16384.  We will change it to new value that is 163849.
+
+
+netIpv4IpLocalPortRange ( the local port range that is used by TCP and UDP traffic to choose the local port)
+cat  /proc/sys/net/ipv4/ip_local_port_range
+By default the value is first:32768   last:60999
+
+We will change it to "32000 60000"
+
+
+--------------------------------------------------------------------------------------------------------------------------------------------
+
+Create a linuxosconfig.json file with the following contents:
+
+{
+ "vm.max_map_count": "65550.",
+ "vm.vfs_cache_pressure": "200",
+ "vm.swappiness": "70",
+ "transparentHugePageEnabled": "never",
+ "swapFileSizeMB": 500,
+ "sysctls": {
+  "netCoreSomaxconn": 163849,
+  "netIpv4IpLocalPortRange": "32000 60000"
+ }
+}
+
+
+Similary let us say you want to change kubelet configurations also.
+
+cpuManagerPolicy (The static policy allows containers in Guaranteed pods with integer CPU requests access to exclusive CPUs on the node.)
+cpuCfsQuota (Enable/Disable CPU CFS quota enforcement for containers that specify CPU limits.)
+containerLogMaxFiles (The maximum number of container log files that can be present for a container.)
+
+Create a kubeletconfig.json file with the following contents:
+
+
+{
+ "cpuManagerPolicy": "static",
+ "cpuCfsQuota": true,
+ "cpuCfsQuotaPeriod": "200ms",
+ "containerLogMaxFiles": 3,
+ "failSwapOn": false
+}
+
+
+You can change other operating system settings also. Let us say we want to change defautl message of the day to each agent node.
+
+- Create a file with some content
+echo "Hello, This message is custom message" > newMOTD.txt
+
+
+
+You can refer https://docs.microsoft.com/en-us/azure/aks/custom-node-configuration for allowed values, default values of all parameters that can be configured in kubelet and linux kernel level.
+When you add a node pool to an existing cluster, you can specify the kubelet configuration, OS configuration, or both. 
+If you specify a configuration when adding a node pool, only the nodes in the new node pool will have that configuration applied. Any settings not configured in the JSON file will retain the default value.
+
+
+az aks nodepool add  \
+             --name nodepool2  \
+             --cluster-name myAKSCluster  \
+             --resource-group myResourceGroup  \
+             --linux-os-config ./linuxosconfig.json \
+             --kubelet-config ./kubeletconfig.json \
+             --message-of-the-day ./newMOTD.txt \
+             --node-count 1 \
+             --os-sku Ubuntu	
