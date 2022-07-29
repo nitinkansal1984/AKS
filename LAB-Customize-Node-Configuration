@@ -100,5 +100,11 @@ kubectl get nodes -o wide
 kubectl debug node/aks-mynodepool1-17163557-vmss000001 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
 chroot /host
 
+Linux OS kernel paramaters:
+sysctl -p
+
+Kubelet Configuration paramaters:
+cat /etc/default/kubeletconfig.json
+
 
 cat /etc/motd
