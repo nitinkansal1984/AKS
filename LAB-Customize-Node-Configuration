@@ -6,7 +6,7 @@ By default value is 65530. We will change it to 65550.
 
 vm.vfs_cache_pressure (It controls the tendency of the kernel to reclaim the memory which is used for caching)	
 cat /proc/sys/vm/vfs_cache_pressure
-By default the value is 100. We will change it to 200.
+By default the value is 100. We will change it to 50.
 
 vm.swappiness (tune how aggressive the kernel will swap memory page)
 cat /sys/fs/cgroup/memory/memory.swappiness
@@ -41,12 +41,12 @@ We will change it to "32000 60000"
 Create a linuxosconfig.json file with the following contents:
 
 {
- "vm.max_map_count": "65550.",
- "vm.vfs_cache_pressure": "200",
- "vm.swappiness": "70",
  "transparentHugePageEnabled": "never",
  "swapFileSizeMB": 500,
  "sysctls": {
+  "vmMaxMapCount": "65550",
+  "vmVfsCachePressure": "50",
+  "vmSwappiness": "70",
   "netCoreSomaxconn": 163849,
   "netIpv4IpLocalPortRange": "32000 60000"
  }
