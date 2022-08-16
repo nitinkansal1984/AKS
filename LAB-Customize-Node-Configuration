@@ -1,44 +1,61 @@
-Virtual Memory setting (The settings below can be used to tune the operation of the virtual memory (VM)) like:
+Customizing your node configuration allows you to configure or tune your operating system (OS) settings or the kubelet parameters to match the needs of the workloads. 
 
-vm.max_map_count (It defines maximum number of memory map areas a process may have)	
+When you create an AKS cluster or add a node pool to your cluster, you can customize a subset of commonly used OS and kubelet settings.
+
+Lets now understand it practically:
+
+Just before starting recording I launched a default single node AKS cluster off screen. Let's run kubectl get nodes -o wide command.
+
+kubectl get nodes -o wide
+
+Now lets login in to worker node of the cluster and see the default OS parameter and kubelet parameter settings.
+
+kubectl debug node/aks-mynodepool1-17163557-vmss000001 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
+chroot /host
+
+Let's check few os and kubelet default parameter vaules.
+
+
+
+1. vm.max_map_count (It defines maximum number of memory map areas a process may have)	
 cat /proc/sys/vm/max_map_count
 By default value is 65530. We will change it to 65550.
+
+2. vm.vfs_cache_pressure (It controls the tendency of the kernel to reclaim the memory which is used for caching)	
 
 vm.vfs_cache_pressure (It controls the tendency of the kernel to reclaim the memory which is used for caching)	
 cat /proc/sys/vm/vfs_cache_pressure
 By default the value is 100. We will change it to 50.
 
-vm.swappiness (tune how aggressive the kernel will swap memory page)
+3. vm.swappiness (tune how aggressive the kernel will swap memory page)
 cat /sys/fs/cgroup/memory/memory.swappiness
 By default the value is 60. We will change it to 70.
 
-transparentHugePageEnabled (Transparent Hugepages is a Linux kernel feature intended to improve performance by making more efficient use of your processor’s memory-mapping hardware)
+4. transparentHugePageEnabled (It is a Linux kernel feature intended to improve performance by making more efficient use of your processor’s memory-mapping hardware)
 cat /sys/kernel/mm/transparent_hugepage/enabled
 By default value of this parameter is set to always. We will change it to never using custom node configuration during new node group creation.
 
-swapFileSizeMB (This defines the swap file size)
+5. swapFileSizeMB (This defines the swap file size)
 swapon -s
 By default there is no swap file. We will plan to create 500MB swapfile.
 
 
 ------------------------------------------------------------------------------------------------------------------------------------------------
-Systl Socket and network tuning (Settings to control large numbers of concurrent sessions)
+6. Next is Systl Socket and network tuning (Settings to control large numbers of concurrent sessions)
 
 netCoreSomaxconn (This defines net core socket max connection)
 cat /proc/sys/net/core/somaxconn
-By default value of this parameter is 16384.  We will change it to new value that is 163849.
+By default value of this parameter is 4096.  We will change it to new value that is 4200.
 
 
-netIpv4IpLocalPortRange ( the local port range that is used by TCP and UDP traffic to choose the local port)
+8. netIpv4IpLocalPortRange ( the local port range that is used by TCP and UDP traffic to choose the local port)
 cat  /proc/sys/net/ipv4/ip_local_port_range
 By default the value is first:32768   last:60999
 
 We will change it to "32000 60000"
 
 
---------------------------------------------------------------------------------------------------------------------------------------------
-
-Create a linuxosconfig.json file with the following contents:
+Let's create a file linuxosconfig.json  with the following contents:
 
 {
  "transparentHugePageEnabled": "never",
@@ -94,17 +111,15 @@ az aks nodepool add  \
              --os-sku Ubuntu	
 
 
-Now finally check the configuration:
+Now lets login in to the node and check the parameters values:
+
 
 kubectl get nodes -o wide
 kubectl debug node/aks-mynodepool1-17163557-vmss000001 -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
 chroot /host
 
-Linux OS kernel paramaters:
-sysctl -p
-
 Kubelet Configuration paramaters:
-cat /etc/default/kubeletconfig.json
+cat /etc/default/kubeletconfig.json |grep -Ei 'cpuManagerPolicy|cpuCfsQuota|containerLogMaxFiles'
 
-
+Additional parameter:
 cat /etc/motd
