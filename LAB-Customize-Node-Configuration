@@ -1,10 +1,10 @@
-Customizing your node configuration allows you to configure or tune your operating system (OS) settings or the kubelet parameters to match the needs of the workloads. 
+There may be a need of specific values of kernel parameters or kubelet parameter in order to run the workloads on the AKS cluster.
 
-When you create an AKS cluster or add a node pool to your cluster, you can customize a subset of commonly used OS and kubelet settings.
+You can customize node configuration and kubelet parameters during the creation of AKS cluster or addition of nodepool. 
 
 Lets now understand it practically:
 
-Just before starting recording I launched a default single node AKS cluster off screen. Let's run kubectl get nodes -o wide command.
+Just before start recording I launched a default single node AKS cluster off screen. So let me walk you through that from azure portal. Here I am in azure.
 
 kubectl get nodes -o wide
 
