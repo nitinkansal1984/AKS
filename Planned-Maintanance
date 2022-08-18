@@ -1,0 +1,61 @@
+The following example output shows the maintenance window from 1:00am to 2:00am every Monday.
+
+az aks maintenanceconfiguration add -g MyResourceGroup --cluster-name myAKSCluster --name default --weekday Monday  --start-hour 1
+
+We can list the maintenance window using command:
+az aks maintenanceconfiguration list -g MyResourceGroup --cluster-name myAKSCluster
+
+
+We can update the existing configuration.
+az aks maintenanceconfiguration update -g MyResourceGroup --cluster-name myAKSCluster --name default --weekday Monday  --start-hour 3
+
+
+Delete the maintanance window configuration using below command:
+az aks maintenanceconfiguration delete -g MyResourceGroup --cluster-name myAKSCluster --name default
+
+
+To allow any time during a day, omit start-hour parameter.
+az aks maintenanceconfiguration add -g MyResourceGroup --cluster-name myAKSCluster --name default --weekday Monday
+
+Let's now delete the maintanance window configuration using below command:
+az aks maintenanceconfiguration delete -g MyResourceGroup --cluster-name myAKSCluster --name default
+
+
+We can add maintanance configuration with Json file also
+
+Create a file test.json
+
+{
+        "timeInWeek": [
+          {
+            "day": "Tuesday",
+            "hour_slots": [
+              1,
+              2
+            ]
+          },
+          {
+            "day": "Wednesday",
+            "hour_slots": [
+              1,
+              6
+            ]
+          }
+        ],
+        "notAllowedTime": [
+          {
+            "start": "2021-05-26T03:00:00Z",
+            "end": "2021-05-30T12:00:00Z"
+          }
+        ]
+}
+
+This jason file will add 2 maintanance windows with one exception.
+Tuesday - 1am-2am, 2am-3am
+Wednesday - 1am-2am, 6am-7am
+No maintenance allowed between 26th May - 30th May
+
+Now lets add this configuration:
+az aks maintenanceconfiguration add -g MyResourceGroup --cluster-name myAKSCluster --name default --config-file ./test.json
+
+
