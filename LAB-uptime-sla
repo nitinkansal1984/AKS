@@ -1,0 +1,20 @@
+You can create new cluster with uptime SLA or you can upgrade existing free tier cluster to paid tree i.e. uptime SLA. 
+
+---> az aks create --resource-group myResourceGroup --name myAKSCluster --uptime-sla --node-count 1
+
+In this demo we will update existing cluster:
+
+Let's first check the tier on existing cluster:
+
+az aks show --name myAKSCluster --resource-group MyResourceGroup
+
+az aks update --resource-group myResourceGroup --name myAKSCluster --uptime-sla
+
+
+At any time you can opt out of using the Uptime SLA by updating your cluster to change it back to the free tier.
+
+az aks update --resource-group myResourceGroup --name myAKSCluster --no-uptime-sla
+
+Please note: Updating your cluster to start/stop using the Uptime SLA does not disrupt its normal operation or impact its availability.
+
+
