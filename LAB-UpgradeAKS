@@ -1,0 +1,61 @@
+To check current control plane kubernetes version
+az aks show --resource-group myResourceGroup --name myAKSCluster --output table
+
+To check which Kubernetes releases are available for upgrade your cluster:
+az aks get-upgrades --resource-group myResourceGroup --name myAKSCluster --output table
+
+
+
+To check nodepool version
+kubectl get nodes
+
+Check current node surge value. By default it is null means it is 1 node.
+az aks nodepool show     --resource-group myResourceGroup     --cluster-name myAKSCluster     --name nodepool1   --query upgradeSettings
+
+
+Lets change nodesurge value to 2
+az aks nodepool update -n nodepool1    -g MyResourceGroup --cluster-name myAKSCluster     --max-surge 2
+
+Verify the nodesurge value now
+az aks nodepool show     --resource-group myResourceGroup     --cluster-name myAKSCluster     --name nodepool1   --query upgradeSettings
+
+
+Now lets create one deployment and one individual pod in default namespace.
+kubectl create deployment nginx --image nginx
+kubectl run mypod --image nginx
+
+kubectl get pods -o wide
+
+Let's now upgrade cluster:
+az aks get-upgrades --resource-group myResourceGroup --name myAKSCluster --output table   -- List which kubernetes revision is available to upgrade.
+az aks upgrade   --resource-group myResourceGroup   --name myAKSCluster  --kubernetes-version 
+
+
+
+Open 2 more terminal
+
+while true ; do kubectl get nodes ; sleep 2; echo "------------------";done
+while true ; do kubectl get pods  -o wide ; sleep 2; echo "------------------";done
+
+
+Now check current control plane kubernetes version and nodepool version
+az aks show --resource-group myResourceGroup --name myAKSCluster --output table
+kubectl get nodes
+
+Also note that pod named mypod is terminated as it was not part of replicaset and deployment.
+
+You can see all events of upgrade using:
+kubectl get events
+
+
+Optional- Create poddisruptionbudget for nginx application which set minavailable replicas for nginx as 2. This should not fail the upgrade because poddisruptionbudget requires minimum of 2 replicas running all the time. But kubernetes upgrade process will move the replica to other node at the time of draining the node.
+
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: pdb-nginx
+spec:
+  minAvailable: 2
+  selector:
+    matchLabels:
+      app: nginx
