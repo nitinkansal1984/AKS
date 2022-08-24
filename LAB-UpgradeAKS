@@ -1,15 +1,15 @@
-To check current control plane kubernetes version
+Lets check control plane kubernetes version
 az aks show --resource-group myResourceGroup --name myAKSCluster --output table
 
-To check which Kubernetes releases are available for upgrade your cluster:
+Lets check which Kubernetes releases are available for upgrade your cluster:
 az aks get-upgrades --resource-group myResourceGroup --name myAKSCluster --output table
 
 
 
-To check nodepool version
+Lets check nodepool kubernetes version
 kubectl get nodes
 
-Check current node surge value. By default it is null means it is 1 node.
+Lets Check current node surge value. By default it is null means it is 1 node.
 az aks nodepool show     --resource-group myResourceGroup     --cluster-name myAKSCluster     --name nodepool1   --query upgradeSettings
 
 
