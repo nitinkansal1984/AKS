@@ -178,13 +178,12 @@ The addon creates user assigned identity named azurekeyvaultsecretsprovider-*. Y
       "resourceId": "/subscriptions/f8b9b693-fc66-4e1b-a547-110404abc3c3/resourcegroups/MC_myResourceGroup_myAKSCluster_eastus/providers/Microsoft.ManagedIdentity/userAssignedIdentities/myAKSCluster-agentpool"
     }
 
-## Let's export the user identity client id to a variable:
+## Let's declare a variable and assign the user identity client id to it, we will use it later.
 
 export IDENTITY_CLIENT_ID="<clientID>"
 
-## It installs the Secrets Store CSI Driver and the Azure Key Vault Provider on your nodes.
 
-## Let's first download the credential and connect to kubernetes cluster
+## Let's now download the credential and connect to kubernetes cluster
 
 az aks get-credentials --resource-group MyResourceGroup --name MyAKSCluster --overwrite
 kubectl get nodes
@@ -200,19 +199,27 @@ aks-secrets-store-provider-azure-5p4nb   1/1     Running   0          4m21s
 aks-secrets-store-provider-azure-6pqmv   1/1     Running   0          4m24s
 aks-secrets-store-provider-azure-f5qlm   1/1     Running   0          4m25s
 
+## Please note, the addon installs the Secrets Store CSI Driver and the Azure Key Vault Provider which are running in the form of pods.
+
 
 ## Let's create azure key vault and create a secret within it
 
+### Lets decalare a variable KEYVAULT for keyvault name with a unique value. 
+
 export KEYVAULT=mykeyvault`date +%d%m%Y`
 
+### Create keyvault
+
 az keyvault create -n $KEYVAULT -g myResourceGroup -l eastus
+
+### Create secret ExampleSecret with the some value.
 
 az keyvault secret set --vault-name $KEYVAULT -n ExampleSecret --value MyAKSExampleSecret
 
 
-## Head back to azure portal to verify vault and secret created 
+## Head back to azure portal to verify vault and see secret is created 
 
-## Grant your identity permissions that enable it to read your key vault and view its contents
+## Now grant your identity permissions that enable it to read your key vault and view its contents
 
 az keyvault set-policy -n $KEYVAULT --secret-permissions get --spn $IDENTITY_CLIENT_ID
 
